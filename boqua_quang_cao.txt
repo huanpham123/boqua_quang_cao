@@ -1,56 +1,30 @@
 // SAFE_SCRIPT_v1
-// Author: yourname
-// Purpose: safe skip for shortlink pages — NO exfiltration, NO remote calls.
-
 (function(){
   'use strict';
-  // hàm helper: thử nhiều selector thông dụng
-  function clickIfExists(selectors){
-    for(const s of selectors){
-      const el = document.querySelector(s);
-      if(el){
-        try{ el.click(); return true; }catch(e){ /* ignore */ }
+  try {
+    // Thử tìm thẻ meta redirect
+    const meta = document.querySelector('meta[http-equiv="refresh"]');
+    if (meta) {
+      const match = (meta.content || '').match(/url=(.*)/i);
+      if (match && match[1]) {
+        window.location.href = match[1];
+        return;
       }
     }
-    return false;
-  }
 
-  // ví dụ: xóa countdown numeric hoặc trigger skip
-  try{
-    // set countdown to 0 nếu có
-    const cd = document.querySelector('[id*="count"]') || document.querySelector('.countdown');
-    if(cd){ 
-      if('value' in cd) cd.value = 0;
-      if('innerText' in cd) cd.innerText = '0';
+    // Thử tìm link đích nếu có sẵn
+    const link = document.querySelector('a[href*="http"]');
+    if (link) {
+      window.location.href = link.href;
+      return;
     }
 
-    // thử click những nút thường gặp
-    const skipSelectors = [
-      'button[id*="skip"]',
-      'button[data-action="skip"]',
-      'a[class*="skip"]',
-      'a[title="Skip"]',
-      'button[id*="continue"]',
-      'a#continue'
-    ];
-    clickIfExists(skipSelectors);
+    // Nếu cần, fetch API trả link đích
+    // Ví dụ giả định API: /getlink?id=...
+    const btn = document.querySelector('button.red');
+    if (btn) btn.click();
 
-    // thử tìm link đích và chuyển hướng nếu tìm thấy <a id="realLink"> hoặc data-url
-    const candidate = document.querySelector('a#realLink') || document.querySelector('a[data-url]');
-    if(candidate){
-      const url = candidate.href || candidate.dataset.url;
-      if(url) window.location.href = url;
-    }
-
-    // nếu tìm thấy thẻ meta chứa redirect
-    const meta = document.querySelector('meta[http-equiv="refresh"]');
-    if(meta){
-      const content = meta.getAttribute('content') || '';
-      const m = content.match(/url=(.*)/i);
-      if(m && m[1]) window.location.href = m[1];
-    }
-  }catch(err){
-    // không làm gì khác — không gửi lỗi đi đâu
-    console.error('safe-skip-script error', err);
+  } catch (err) {
+    console.error('Error bypassing linkday', err);
   }
 })();
